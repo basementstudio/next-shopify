@@ -1,5 +1,11 @@
 import React from 'react'
-import { useMutation, useQuery, useQueryClient } from 'react-query'
+import {
+  QueryClient,
+  QueryClientProvider,
+  useMutation,
+  useQuery,
+  useQueryClient
+} from 'react-query'
 import { useToggleState, ToggleState } from './utils'
 
 type LineItem = {
@@ -21,6 +27,7 @@ export type Cart = Omit<any, 'checkoutUrl' | 'lineItems'> & {
 type Context = {
   cartToggleState: ToggleState
   cart: Cart | undefined
+  cartItemsCount: number | undefined
   onAddLineItem: (vars: {
     variantId: string
     quantity: number
@@ -36,11 +43,7 @@ const ShopifyContext = React.createContext<Context | undefined>(undefined)
 
 const getQueryKey = (checkoutId: string | null) => ['checkout', checkoutId]
 
-export const ShopifyContextProvider = ({
-  children
-}: {
-  children?: React.ReactNode
-}) => {
+const ContextProvider = ({ children }: { children?: React.ReactNode }) => {
   const cartToggleState = useToggleState()
   const [localStorageCheckoutId, setLocalStorageCheckoutId] = React.useState<
     string | null
@@ -156,11 +159,22 @@ export const ShopifyContextProvider = ({
     }
   })
 
+  const cartItemsCount = React.useMemo(() => {
+    let result = 0
+    if (cart?.lineItems && cart?.lineItems.length) {
+      cart.lineItems.forEach(i => {
+        result += i.quantity
+      })
+    }
+    return result
+  }, [cart?.lineItems])
+
   return (
     <ShopifyContext.Provider
       value={{
         cart,
         cartToggleState,
+        cartItemsCount,
         onAddLineItem,
         onRemoveLineItem,
         onUpdateLineItem
@@ -168,6 +182,16 @@ export const ShopifyContextProvider = ({
     >
       {children}
     </ShopifyContext.Provider>
+  )
+}
+
+const queryClient = new QueryClient()
+
+export const ShopifyContextProvider: React.FC = ({ children }) => {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ContextProvider>{children}</ContextProvider>
+    </QueryClientProvider>
   )
 }
 

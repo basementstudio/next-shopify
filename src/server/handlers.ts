@@ -1,11 +1,11 @@
+import Client from 'shopify-buy'
 import { badRequest, internalServerError, success } from '../lib/api-responses'
-import { client } from '../lib/shopify'
-import { NextApiHandler, NextApiRequest, NextApiResponse } from 'next'
+import { NextApiRequest, NextApiResponse } from 'next'
 
 export const cartHandler = async (
   req: NextApiRequest,
   res: NextApiResponse,
-  id: string
+  { id, client }: { id: string; client: Client.Client }
 ) => {
   try {
     const { variantId, quantity, putAction } = req.body
@@ -83,7 +83,11 @@ export const cartHandler = async (
   }
 }
 
-export const newCartHandler: NextApiHandler = async (req, res) => {
+export const newCartHandler = async (
+  req: NextApiRequest,
+  res: NextApiResponse,
+  { client }: { client: Client.Client }
+) => {
   try {
     switch (req.method) {
       case 'GET': {
