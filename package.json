@@ -1,6 +1,6 @@
 {
   "name": "next-shopify",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "main": "./dist/index.js",
   "module": "./dist/index.modern.js",
   "types": "./dist/index.d.ts",
@@ -14,13 +14,14 @@
     "build": "microbundle --jsx React.createElement --compress --no-sourcemap",
     "test": "jest"
   },
-  "dependencies": {},
+  "dependencies": {
+    "react-query": "^3.21.0",
+    "shopify-buy": "^2.11.0"
+  },
   "peerDependencies": {
     "next": "*",
     "react": "*",
-    "react-dom": "*",
-    "react-query": "*",
-    "shopify-buy": "*"
+    "react-dom": "*"
   },
   "devDependencies": {
     "@babel/core": "^7.13.10",
@@ -39,8 +40,6 @@
     "prettier": "^2.2.1",
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
-    "react-query": "^3.21.0",
-    "shopify-buy": "^2.11.0",
     "typescript": "^4.0.3"
   },
   "repository": {
