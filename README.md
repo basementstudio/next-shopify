@@ -1,6 +1,6 @@
 # next-shopify
 
-A context, a hook, and an API route handler to manage your Shopify Storefront in your Next.js app.
+A context, a hook, and an API route handler, to manage a Shopify Storefront in your Next.js app.
 
 - ✅ Easy to use, Next.js friendly implementation of the [Shopify Storefront API](https://shopify.dev/api/storefront).
 - 🗄 Store your cart id in [`localStorage`](https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage).
@@ -53,8 +53,8 @@ export default handleShopifyStorefront({
 })
 ```
 
-
 ### 3. Use the Hook
+
 This is just an example.
 
 ```tsx
@@ -75,7 +75,7 @@ export const Cart = () => {
     <div>
       <h2>Cart</h2>
       <button onClick={cartToggleState.handleOff}>Close</button>
-      {cart.lineItems.map((lineItem) => {
+      {cart.lineItems.map(lineItem => {
         return (
           <div key={lineItem.id}>
             <p>{lineItem.title}</p>
@@ -104,4 +104,4 @@ export const Header = () => {
 
 ---
 
-![we make cool sh\*t that performs](https://basement.studio/images/index/twitter-card.png)
+![we make cool sh*t that performs](https://basement.studio/images/index/twitter-card.png)

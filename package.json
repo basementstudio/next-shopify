@@ -1,5 +1,10 @@
 {
   "name": "next-shopify",
+  "author": {
+    "email": "julianbenegas99@gmail.com",
+    "name": "Julian Benegas",
+    "url": "https://julianbenegas.com"
+  },
   "version": "0.3.2",
   "main": "./dist/index.js",
   "module": "./dist/index.modern.js",
