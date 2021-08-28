@@ -120,6 +120,20 @@ export const Header = () => {
 }
 ```
 
+## Using Other `shopify-buy` Methods
+
+[`shopify-buy`](https://www.npmjs.com/package/shopify-buy) is the official Storefront API JavaScript SDK. It's robust, but not easy to integrate — precisely why we created `next-shopify`. That being said, you'll probably still need to use other `shopify-buy` methods, and so we expose the whole client:
+
+```ts
+// /lib/shopify.ts
+import { createClient } from 'next-shopify'
+
+export const client = createClient({
+  domain: process.env.NEXT_PUBLIC_SHOPIFY_DOMAIN as string,
+  storefrontAccessToken: process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN as string
+})
+```
+
 ---
 
 ![we make cool sh*t that performs](https://basement.studio/images/index/twitter-card.png)
