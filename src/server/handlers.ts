@@ -45,7 +45,7 @@ export const cartHandler = async (
         if (
           typeof variantId !== 'string' ||
           typeof putAction !== 'string' ||
-          typeof quantity !== 'number'
+          (putAction === 'update' && typeof quantity !== 'number')
         ) {
           return badRequest(
             res,
