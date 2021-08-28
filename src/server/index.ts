@@ -3,16 +3,16 @@ import { badRequest } from '../lib/api-responses'
 import { ClientConfig, createClient } from '../lib/shopify'
 import { cartHandler, newCartHandler } from './handlers'
 
-export const handleShopify = (config: ClientConfig) => {
+export const handleShopifyStorefront = (config: ClientConfig) => {
   const handler: NextApiHandler<string[]> = (req, res) => {
-    const { shopify } = req.query
+    const { storefront } = req.query
 
-    if (Array.isArray(shopify)) {
-      if (shopify[0] === 'checkout') {
+    if (Array.isArray(storefront)) {
+      if (storefront[0] === 'checkout') {
         const client = createClient(config)
-        if (shopify[1]) {
+        if (storefront[1]) {
           // is cart operation
-          return cartHandler(req, res, { client, id: shopify[1] })
+          return cartHandler(req, res, { client, id: storefront[1] })
         } else {
           // is request for new cart
           return newCartHandler(req, res, { client })

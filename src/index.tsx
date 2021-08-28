@@ -1,3 +1,3 @@
 export { ShopifyContextProvider, useShopify, Cart } from './client'
-export { handleShopify } from './server'
+export { handleShopifyStorefront } from './server'
 export { createClient } from './lib/shopify'
