@@ -40,7 +40,7 @@ yarn add next-shopify
 ### 1. Wrap Your Application with the Context Provider
 
 ```tsx
-// /pages/_app.tsx
+// pages/_app.tsx
 import { AppProps } from 'next/app'
 import { ShopifyContextProvider } from 'next-shopify'
 
@@ -60,7 +60,7 @@ export default App
 We add an API Route, and we use `next-shopify`'s built in handler.
 
 ```ts
-// /pages/api/shopify/[...storefront].ts
+// pages/api/shopify/[...storefront].ts
 import { handleShopifyStorefront } from 'next-shopify'
 
 // be sure to add the correct env variables.
@@ -125,7 +125,7 @@ export const Header = () => {
 [`shopify-buy`](https://www.npmjs.com/package/shopify-buy) is the official Storefront API JavaScript SDK. It's robust, but not easy to integrate — precisely why we created `next-shopify`. That being said, you'll probably still need to use other `shopify-buy` methods, and so we expose the whole client:
 
 ```ts
-// /lib/shopify.ts
+// lib/shopify.ts
 import { createClient } from 'next-shopify'
 
 export const client = createClient({
