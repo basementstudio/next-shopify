@@ -43,12 +43,25 @@ const ShopifyContext = React.createContext<Context | undefined>(undefined)
 
 const getQueryKey = (checkoutId: string | null) => ['checkout', checkoutId]
 
-const ContextProvider = ({ children }: { children?: React.ReactNode }) => {
+const ContextProvider = ({
+  children,
+  baseApiPath = '/api/shopify/'
+}: {
+  children?: React.ReactNode
+  baseApiPath?: string
+}) => {
   const cartToggleState = useToggleState()
   const [localStorageCheckoutId, setLocalStorageCheckoutId] = React.useState<
     string | null
   >(null)
   const queryClient = useQueryClient()
+
+  const getApiPath = React.useCallback((path: string) => {
+    const cleanBaseApiPath = baseApiPath.endsWith('/')
+      ? baseApiPath.substring(0, baseApiPath.length - 1)
+      : baseApiPath
+    return cleanBaseApiPath + path
+  }, [])
 
   const queryKey = React.useMemo(() => getQueryKey(localStorageCheckoutId), [
     localStorageCheckoutId
@@ -58,7 +71,7 @@ const ContextProvider = ({ children }: { children?: React.ReactNode }) => {
     const checkoutId = localStorage.getItem('checkout-id')
     if (checkoutId) setLocalStorageCheckoutId(checkoutId)
     else {
-      fetch('/api/checkout').then(async res => {
+      fetch(getApiPath('/checkout')).then(async res => {
         const { checkout } = await res.json()
         const checkoutId = checkout.id.toString()
         queryClient.setQueryData(['checkout', checkoutId], checkout)
@@ -66,12 +79,12 @@ const ContextProvider = ({ children }: { children?: React.ReactNode }) => {
         setLocalStorageCheckoutId(checkoutId)
       })
     }
-  }, [queryClient])
+  }, [queryClient, getApiPath])
 
   const { data: cart } = useQuery<Cart>(queryKey, {
     enabled: !!localStorageCheckoutId,
     queryFn: async () => {
-      const res = await fetch(`/api/checkout/${localStorageCheckoutId}`)
+      const res = await fetch(getApiPath(`/checkout/${localStorageCheckoutId}`))
       const { checkout } = await res.json()
       const checkoutId = checkout.id.toString()
       if (checkoutId !== localStorageCheckoutId) {
@@ -92,13 +105,16 @@ const ContextProvider = ({ children }: { children?: React.ReactNode }) => {
       variantId: string
       quantity: number
     }) => {
-      const res = await fetch(`/api/checkout/${localStorageCheckoutId}`, {
-        method: 'POST',
-        body: JSON.stringify({ variantId, quantity }),
-        headers: {
-          'content-type': 'application/json'
+      const res = await fetch(
+        getApiPath(`/checkout/${localStorageCheckoutId}`),
+        {
+          method: 'POST',
+          body: JSON.stringify({ variantId, quantity }),
+          headers: {
+            'content-type': 'application/json'
+          }
         }
-      })
+      )
       const { checkout } = await res.json()
       return checkout
     },
@@ -119,13 +135,16 @@ const ContextProvider = ({ children }: { children?: React.ReactNode }) => {
       variantId: string
       quantity: number
     }) => {
-      const res = await fetch(`/api/checkout/${localStorageCheckoutId}`, {
-        method: 'PUT',
-        body: JSON.stringify({ variantId, quantity, putAction: 'update' }),
-        headers: {
-          'content-type': 'application/json'
+      const res = await fetch(
+        getApiPath(`/checkout/${localStorageCheckoutId}`),
+        {
+          method: 'PUT',
+          body: JSON.stringify({ variantId, quantity, putAction: 'update' }),
+          headers: {
+            'content-type': 'application/json'
+          }
         }
-      })
+      )
       const { checkout } = await res.json()
       return checkout
     },
@@ -140,13 +159,16 @@ const ContextProvider = ({ children }: { children?: React.ReactNode }) => {
 
   const { mutateAsync: onRemoveLineItem } = useMutation({
     mutationFn: async ({ variantId }: { variantId: string }) => {
-      const res = await fetch(`/api/checkout/${localStorageCheckoutId}`, {
-        method: 'PUT',
-        body: JSON.stringify({ variantId, putAction: 'remove' }),
-        headers: {
-          'content-type': 'application/json'
+      const res = await fetch(
+        getApiPath(`/checkout/${localStorageCheckoutId}`),
+        {
+          method: 'PUT',
+          body: JSON.stringify({ variantId, putAction: 'remove' }),
+          headers: {
+            'content-type': 'application/json'
+          }
         }
-      })
+      )
       const { checkout } = await res.json()
       return checkout
     },
