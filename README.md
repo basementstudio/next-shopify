@@ -1,5 +1,7 @@
 # next-shopify
 
+[![from the basement.](https://basement.studio/gh-badge.svg)](https://basement.studio)
+
 A context, a hook, and an API route handler, to manage a Shopify Storefront in your Next.js app.
 
 - ✅ Easy to use, Next.js friendly implementation of the [Shopify Storefront API](https://shopify.dev/api/storefront).
@@ -7,7 +9,19 @@ A context, a hook, and an API route handler, to manage a Shopify Storefront in y
 - 🐎 Global app cache with [`react-query`](https://react-query.tanstack.com/).
 - 💥 API route handler with [catch-all API routes](https://nextjs.org/docs/api-routes/dynamic-api-routes#catch-all-api-routes).
 
-## What You'll Need
+## Install
+
+```bash
+yarn add next-shopify
+```
+
+Or with npm:
+
+```bash
+npm i next-shopify
+```
+
+## Before You Start
 
 In order to use the Storefront API, which is what this library uses, you'll need to set up your Shopify Store with a private app.
 
@@ -18,6 +32,10 @@ In order to use the Storefront API, which is what this library uses, you'll need
 ## Usage
 
 Just three steps and we'll be ready to roll.
+
+```bash
+yarn add next-shopify
+```
 
 ### 1. Wrap Your Application with the Context Provider
 
