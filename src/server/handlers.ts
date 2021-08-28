@@ -18,9 +18,8 @@ export const cartHandler = async (
       case 'GET': {
         let checkout
         try {
-          checkout =
-            (await client.checkout.fetch(id)) ??
-            (await client.checkout.create())
+          checkout = await client.checkout.fetch(id)
+          if (!checkout) checkout = await client.checkout.create()
         } catch (error) {
           checkout = await client.checkout.create()
         }
