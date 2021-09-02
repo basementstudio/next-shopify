@@ -5,7 +5,7 @@
     "name": "Julian Benegas",
     "url": "https://julianbenegas.com"
   },
-  "version": "0.3.2",
+  "version": "0.4.0",
   "main": "./dist/index.js",
   "module": "./dist/index.modern.js",
   "types": "./dist/index.d.ts",
@@ -20,6 +20,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "@types/shopify-buy": "^2.10.7",
     "react-query": "^3.21.0",
     "shopify-buy": "^2.11.0"
   },
@@ -38,7 +39,6 @@
     "@types/jest": "^26.0.21",
     "@types/next": "^9.0.0",
     "@types/react": "^16.9.53",
-    "@types/shopify-buy": "^2.10.7",
     "babel-jest": "^26.6.3",
     "jest": "^26.6.3",
     "microbundle": "^0.12.3",

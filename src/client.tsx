@@ -13,15 +13,29 @@ type LineItem = {
   title: string
   quantity: number
   variant: {
+    title: string
+    available: boolean
     image: { src: string; altText?: string }
     price: string
+    sku: string
     selectedOptions: { name: string; value: string }[]
+    product: {
+      id: string
+      handle: string
+    }
   }
 }
 
-export type Cart = Omit<any, 'checkoutUrl' | 'lineItems'> & {
+export type Cart = Omit<
+  ShopifyBuy.Cart,
+  'checkoutUrl' | 'lineItems' | 'lineItemCount' | 'attrs'
+> & {
   webUrl: string
   lineItems: LineItem[]
+  createdAt: string
+  updatedAt: string
+  currencyCode: string
+  ready: boolean
 }
 
 type Context = {

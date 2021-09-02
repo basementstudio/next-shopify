@@ -9,7 +9,7 @@ export const handleShopifyStorefront = (config: ClientConfig) => {
 
     if (Array.isArray(storefront)) {
       if (storefront[0] === 'checkout') {
-        const client = createClient(config)
+        const { client } = createClient(config)
         if (storefront[1]) {
           // is cart operation
           return cartHandler(req, res, { client, id: storefront[1] })
