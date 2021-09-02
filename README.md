@@ -120,15 +120,63 @@ export const Header = () => {
 }
 ```
 
-## Using Other `shopify-buy` Methods
+## Fetching Products
 
-[`shopify-buy`](https://www.npmjs.com/package/shopify-buy) is the official Storefront API JavaScript SDK. It's robust, but not easy to integrate — precisely why we created `next-shopify`. That being said, you'll probably still need to use other `shopify-buy` methods, and so we expose the whole client:
+In the following example, we explain how to use some helper methods to fetch products. Be aware that `shopify-buy` typings are wrong, and thus our methods can receive a custom `formatProduct` function that can help you have a better TypeScript experience.
 
 ```ts
 // lib/shopify.ts
 import { createClient } from 'next-shopify'
 
-export const client = createClient({
+const { fetchAllProducts, fetchProductByHandle, client } = createClient({
+  domain: process.env.NEXT_PUBLIC_SHOPIFY_DOMAIN as string,
+  storefrontAccessToken: process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN as string
+})
+
+fetchAllProducts().then(products => {
+  console.log(products)
+})
+
+fetchProductByHandle('<slug>').then(product => {
+  console.log(product)
+})
+
+// Passing a formatter (for better TypeScript experience) --------
+
+function formatProduct(p: ShopifyBuy.Product) {
+  return {
+    id: p.id.toString(),
+    title: p.title,
+    slug: (p as any).handle as string, // shopify buy typings are wrong, sorry for this...
+    images: p.images.map(img => ({
+      src: img.src,
+      alt: (img as any).altText ?? null
+    }))
+  }
+}
+
+fetchAllProducts(formatProduct).then(products => {
+  console.log(products)
+})
+
+fetchProductByHandle('<slug>', formatProduct).then(product => {
+  console.log(product)
+})
+
+// We also expose the whole client -------------------------------
+
+console.log(client)
+```
+
+## Using Other `shopify-buy` Methods
+
+[`shopify-buy`](https://www.npmjs.com/package/shopify-buy) is the official Storefront API JavaScript SDK. It's robust, but not easy to integrate — precisely why we created `next-shopify`. Therefore, if you still need to use other `shopify-buy` methods, we expose the whole client like this:
+
+```ts
+// lib/shopify.ts
+import { createClient } from 'next-shopify'
+
+export const { client } = createClient({
   domain: process.env.NEXT_PUBLIC_SHOPIFY_DOMAIN as string,
   storefrontAccessToken: process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN as string
 })
