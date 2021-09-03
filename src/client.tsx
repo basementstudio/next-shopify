@@ -8,7 +8,7 @@ import {
 } from 'react-query'
 import { useToggleState, ToggleState } from './utils'
 
-type LineItem = {
+export type LineItem = {
   id: string
   title: string
   quantity: number
