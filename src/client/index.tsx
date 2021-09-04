@@ -1,3 +1,4 @@
+import { ClientConfig, createClient } from '../lib/shopify'
 import React from 'react'
 import {
   QueryClient,
@@ -6,7 +7,7 @@ import {
   useQuery,
   useQueryClient
 } from 'react-query'
-import { useToggleState, ToggleState } from './utils'
+import { useToggleState, ToggleState } from '../utils'
 
 export type LineItem = {
   id: string
@@ -45,12 +46,12 @@ type Context = {
   onAddLineItem: (vars: {
     variantId: string
     quantity: number
-  }) => Promise<void>
-  onRemoveLineItem: (vars: { variantId: string }) => Promise<void>
+  }) => Promise<Cart | undefined>
+  onRemoveLineItem: (vars: { variantId: string }) => Promise<Cart | undefined>
   onUpdateLineItem: (vars: {
     variantId: string
     quantity: number
-  }) => Promise<void>
+  }) => Promise<Cart | undefined>
 }
 
 const ShopifyContext = React.createContext<Context | undefined>(undefined)
@@ -59,10 +60,10 @@ const getQueryKey = (checkoutId: string | null) => ['checkout', checkoutId]
 
 const ContextProvider = ({
   children,
-  baseApiPath = '/api/shopify/'
+  config
 }: {
   children?: React.ReactNode
-  baseApiPath?: string
+  config: ClientConfig
 }) => {
   const cartToggleState = useToggleState()
   const [localStorageCheckoutId, setLocalStorageCheckoutId] = React.useState<
@@ -70,12 +71,9 @@ const ContextProvider = ({
   >(null)
   const queryClient = useQueryClient()
 
-  const getApiPath = React.useCallback((path: string) => {
-    const cleanBaseApiPath = baseApiPath.endsWith('/')
-      ? baseApiPath.substring(0, baseApiPath.length - 1)
-      : baseApiPath
-    return cleanBaseApiPath + path
-  }, [])
+  const { client } = React.useMemo(() => {
+    return createClient(config)
+  }, [config])
 
   const queryKey = React.useMemo(() => getQueryKey(localStorageCheckoutId), [
     localStorageCheckoutId
@@ -85,21 +83,26 @@ const ContextProvider = ({
     const checkoutId = localStorage.getItem('checkout-id')
     if (checkoutId) setLocalStorageCheckoutId(checkoutId)
     else {
-      fetch(getApiPath('/checkout')).then(async res => {
-        const { checkout } = await res.json()
+      client.checkout.create().then(checkout => {
         const checkoutId = checkout.id.toString()
         queryClient.setQueryData(['checkout', checkoutId], checkout)
         localStorage.setItem('checkout-id', checkoutId)
         setLocalStorageCheckoutId(checkoutId)
       })
     }
-  }, [queryClient, getApiPath])
+  }, [queryClient])
 
-  const { data: cart } = useQuery<Cart>(queryKey, {
+  const { data: cart } = useQuery<Cart | undefined>(queryKey, {
     enabled: !!localStorageCheckoutId,
     queryFn: async () => {
-      const res = await fetch(getApiPath(`/checkout/${localStorageCheckoutId}`))
-      const { checkout } = await res.json()
+      if (!localStorageCheckoutId) return undefined
+      let checkout
+      try {
+        checkout = await client.checkout.fetch(localStorageCheckoutId)
+        if (!checkout) checkout = await client.checkout.create()
+      } catch (error) {
+        checkout = await client.checkout.create()
+      }
       const checkoutId = checkout.id.toString()
       if (checkoutId !== localStorageCheckoutId) {
         // the checkout was invalid
@@ -107,7 +110,7 @@ const ContextProvider = ({
         setLocalStorageCheckoutId(checkoutId)
         queryClient.setQueryData(getQueryKey(checkoutId), checkout)
       }
-      return checkout
+      return (checkout as unknown) as Cart
     }
   })
 
@@ -119,18 +122,12 @@ const ContextProvider = ({
       variantId: string
       quantity: number
     }) => {
-      const res = await fetch(
-        getApiPath(`/checkout/${localStorageCheckoutId}`),
-        {
-          method: 'POST',
-          body: JSON.stringify({ variantId, quantity }),
-          headers: {
-            'content-type': 'application/json'
-          }
-        }
+      if (!localStorageCheckoutId) return
+      const checkout = await client.checkout.addLineItems(
+        localStorageCheckoutId,
+        [{ variantId, quantity }]
       )
-      const { checkout } = await res.json()
-      return checkout
+      return (checkout as unknown) as Cart
     },
     onSuccess: newCheckout => {
       queryClient.setQueryData(queryKey, newCheckout)
@@ -149,18 +146,12 @@ const ContextProvider = ({
       variantId: string
       quantity: number
     }) => {
-      const res = await fetch(
-        getApiPath(`/checkout/${localStorageCheckoutId}`),
-        {
-          method: 'PUT',
-          body: JSON.stringify({ variantId, quantity, putAction: 'update' }),
-          headers: {
-            'content-type': 'application/json'
-          }
-        }
+      if (!localStorageCheckoutId) return
+      const checkout = await client.checkout.updateLineItems(
+        localStorageCheckoutId,
+        [{ quantity, id: variantId }]
       )
-      const { checkout } = await res.json()
-      return checkout
+      return (checkout as unknown) as Cart
     },
     onSuccess: newCheckout => {
       queryClient.setQueryData(queryKey, newCheckout)
@@ -173,18 +164,12 @@ const ContextProvider = ({
 
   const { mutateAsync: onRemoveLineItem } = useMutation({
     mutationFn: async ({ variantId }: { variantId: string }) => {
-      const res = await fetch(
-        getApiPath(`/checkout/${localStorageCheckoutId}`),
-        {
-          method: 'PUT',
-          body: JSON.stringify({ variantId, putAction: 'remove' }),
-          headers: {
-            'content-type': 'application/json'
-          }
-        }
+      if (!localStorageCheckoutId) return
+      const checkout = await client.checkout.removeLineItems(
+        localStorageCheckoutId,
+        [variantId]
       )
-      const { checkout } = await res.json()
-      return checkout
+      return (checkout as unknown) as Cart
     },
     onSuccess: newCheckout => {
       queryClient.setQueryData(queryKey, newCheckout)
@@ -223,10 +208,13 @@ const ContextProvider = ({
 
 const queryClient = new QueryClient()
 
-export const ShopifyContextProvider: React.FC = ({ children }) => {
+export const ShopifyContextProvider: React.FC<{ config: ClientConfig }> = ({
+  children,
+  config
+}) => {
   return (
     <QueryClientProvider client={queryClient}>
-      <ContextProvider>{children}</ContextProvider>
+      <ContextProvider config={config}>{children}</ContextProvider>
     </QueryClientProvider>
   )
 }
