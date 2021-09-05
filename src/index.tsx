@@ -1,3 +1,5 @@
 export { ShopifyContextProvider, useShopify, Cart, LineItem } from './client'
+export { handleShopifyStorefront } from './server'
 export { createClient } from './lib/shopify'
 export { useToggleState } from './utils'
+export * as apiResponses from './lib/api-responses'

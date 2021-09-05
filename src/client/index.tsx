@@ -1,4 +1,4 @@
-import { ClientConfig, createClient } from '../lib/shopify'
+import { ClientConfig } from '../lib/shopify'
 import React from 'react'
 import {
   QueryClient,
@@ -60,10 +60,10 @@ const getQueryKey = (checkoutId: string | null) => ['checkout', checkoutId]
 
 const ContextProvider = ({
   children,
-  config
+  baseApiPath = '/api/shopify/'
 }: {
   children?: React.ReactNode
-  config: ClientConfig
+  baseApiPath?: string
 }) => {
   const cartToggleState = useToggleState()
   const [localStorageCheckoutId, setLocalStorageCheckoutId] = React.useState<
@@ -71,38 +71,36 @@ const ContextProvider = ({
   >(null)
   const queryClient = useQueryClient()
 
-  const { client } = React.useMemo(() => {
-    return createClient(config)
-  }, [config])
-
   const queryKey = React.useMemo(() => getQueryKey(localStorageCheckoutId), [
     localStorageCheckoutId
   ])
+
+  const getApiPath = React.useCallback((path: string) => {
+    const cleanBaseApiPath = baseApiPath.endsWith('/')
+      ? baseApiPath.substring(0, baseApiPath.length - 1)
+      : baseApiPath
+    return cleanBaseApiPath + path
+  }, [])
 
   React.useEffect(() => {
     const checkoutId = localStorage.getItem('checkout-id')
     if (checkoutId) setLocalStorageCheckoutId(checkoutId)
     else {
-      client.checkout.create().then(checkout => {
+      fetch(getApiPath('/checkout')).then(async res => {
+        const { checkout } = await res.json()
         const checkoutId = checkout.id.toString()
         queryClient.setQueryData(['checkout', checkoutId], checkout)
         localStorage.setItem('checkout-id', checkoutId)
         setLocalStorageCheckoutId(checkoutId)
       })
     }
-  }, [queryClient])
+  }, [queryClient, getApiPath])
 
-  const { data: cart } = useQuery<Cart | undefined>(queryKey, {
+  const { data: cart } = useQuery<Cart>(queryKey, {
     enabled: !!localStorageCheckoutId,
     queryFn: async () => {
-      if (!localStorageCheckoutId) return undefined
-      let checkout
-      try {
-        checkout = await client.checkout.fetch(localStorageCheckoutId)
-        if (!checkout) checkout = await client.checkout.create()
-      } catch (error) {
-        checkout = await client.checkout.create()
-      }
+      const res = await fetch(getApiPath(`/checkout/${localStorageCheckoutId}`))
+      const { checkout } = await res.json()
       const checkoutId = checkout.id.toString()
       if (checkoutId !== localStorageCheckoutId) {
         // the checkout was invalid
@@ -122,12 +120,18 @@ const ContextProvider = ({
       variantId: string
       quantity: number
     }) => {
-      if (!localStorageCheckoutId) return
-      const checkout = await client.checkout.addLineItems(
-        localStorageCheckoutId,
-        [{ variantId, quantity }]
+      const res = await fetch(
+        getApiPath(`/checkout/${localStorageCheckoutId}`),
+        {
+          method: 'POST',
+          body: JSON.stringify({ variantId, quantity }),
+          headers: {
+            'content-type': 'application/json'
+          }
+        }
       )
-      return (checkout as unknown) as Cart
+      const { checkout } = await res.json()
+      return checkout
     },
     onSuccess: newCheckout => {
       queryClient.setQueryData(queryKey, newCheckout)
@@ -146,12 +150,18 @@ const ContextProvider = ({
       variantId: string
       quantity: number
     }) => {
-      if (!localStorageCheckoutId) return
-      const checkout = await client.checkout.updateLineItems(
-        localStorageCheckoutId,
-        [{ quantity, id: variantId }]
+      const res = await fetch(
+        getApiPath(`/checkout/${localStorageCheckoutId}`),
+        {
+          method: 'PUT',
+          body: JSON.stringify({ variantId, quantity, putAction: 'update' }),
+          headers: {
+            'content-type': 'application/json'
+          }
+        }
       )
-      return (checkout as unknown) as Cart
+      const { checkout } = await res.json()
+      return checkout
     },
     onSuccess: newCheckout => {
       queryClient.setQueryData(queryKey, newCheckout)
@@ -164,12 +174,18 @@ const ContextProvider = ({
 
   const { mutateAsync: onRemoveLineItem } = useMutation({
     mutationFn: async ({ variantId }: { variantId: string }) => {
-      if (!localStorageCheckoutId) return
-      const checkout = await client.checkout.removeLineItems(
-        localStorageCheckoutId,
-        [variantId]
+      const res = await fetch(
+        getApiPath(`/checkout/${localStorageCheckoutId}`),
+        {
+          method: 'PUT',
+          body: JSON.stringify({ variantId, putAction: 'remove' }),
+          headers: {
+            'content-type': 'application/json'
+          }
+        }
       )
-      return (checkout as unknown) as Cart
+      const { checkout } = await res.json()
+      return checkout
     },
     onSuccess: newCheckout => {
       queryClient.setQueryData(queryKey, newCheckout)
@@ -209,12 +225,11 @@ const ContextProvider = ({
 const queryClient = new QueryClient()
 
 export const ShopifyContextProvider: React.FC<{ config: ClientConfig }> = ({
-  children,
-  config
+  children
 }) => {
   return (
     <QueryClientProvider client={queryClient}>
-      <ContextProvider config={config}>{children}</ContextProvider>
+      <ContextProvider>{children}</ContextProvider>
     </QueryClientProvider>
   )
 }

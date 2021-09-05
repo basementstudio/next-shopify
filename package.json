@@ -5,7 +5,7 @@
     "name": "Julian Benegas",
     "url": "https://julianbenegas.com"
   },
-  "version": "0.5.1",
+  "version": "0.6.0",
   "main": "./dist/index.js",
   "module": "./dist/index.modern.js",
   "types": "./dist/index.d.ts",
