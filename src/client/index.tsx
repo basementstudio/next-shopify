@@ -1,5 +1,5 @@
 import { ClientConfig, createClient } from '../lib/shopify'
-import React from 'react'
+import * as React from 'react'
 import {
   QueryClient,
   QueryClientProvider,
@@ -82,37 +82,42 @@ const ContextProvider = ({
   React.useEffect(() => {
     const checkoutId = localStorage.getItem('checkout-id')
     if (checkoutId) setLocalStorageCheckoutId(checkoutId)
-    else {
-      client.checkout.create().then(checkout => {
-        const checkoutId = checkout.id.toString()
-        queryClient.setQueryData(['checkout', checkoutId], checkout)
-        localStorage.setItem('checkout-id', checkoutId)
-        setLocalStorageCheckoutId(checkoutId)
-      })
-    }
-  }, [queryClient])
+  }, [])
 
   const { data: cart } = useQuery<Cart | undefined>(queryKey, {
     enabled: !!localStorageCheckoutId,
     queryFn: async () => {
       if (!localStorageCheckoutId) return undefined
-      let checkout
-      try {
-        checkout = await client.checkout.fetch(localStorageCheckoutId)
-        if (!checkout) checkout = await client.checkout.create()
-      } catch (error) {
-        checkout = await client.checkout.create()
-      }
-      const checkoutId = checkout.id.toString()
-      if (checkoutId !== localStorageCheckoutId) {
-        // the checkout was invalid
-        localStorage.setItem('checkout-id', checkoutId)
-        setLocalStorageCheckoutId(checkoutId)
-        queryClient.setQueryData(getQueryKey(checkoutId), checkout)
+      const checkout = await client.checkout.fetch(localStorageCheckoutId)
+      if (!checkout) {
+        // checkout has expired or doesn't exist
+        setLocalStorageCheckoutId(null)
+        localStorage.removeItem('checkout-id')
+        return undefined
       }
       return (checkout as unknown) as Cart
-    }
+    },
+    refetchOnWindowFocus: false
   })
+
+  const createCheckout = React.useCallback(async () => {
+    // TODO here we should implement a queue system to prevent throttling the Storefront API
+    // Remember: 1k created checkouts per minute is the limit (4k for Shopify Plus)
+    const checkout = await client.checkout.create()
+    const checkoutId = checkout.id.toString()
+    queryClient.setQueryData(getQueryKey(checkoutId), checkout)
+    localStorage.setItem('checkout-id', checkoutId)
+    setLocalStorageCheckoutId(checkoutId)
+    return checkout
+  }, [client.checkout, queryClient])
+
+  const requestCheckoutId = React.useCallback(async () => {
+    let checkoutId = localStorageCheckoutId
+    if (!checkoutId) {
+      checkoutId = (await createCheckout()).id.toString()
+    }
+    return checkoutId
+  }, [createCheckout, localStorageCheckoutId])
 
   const { mutateAsync: onAddLineItem } = useMutation({
     mutationFn: async ({
@@ -122,19 +127,15 @@ const ContextProvider = ({
       variantId: string
       quantity: number
     }) => {
-      if (!localStorageCheckoutId) return
-      const checkout = await client.checkout.addLineItems(
-        localStorageCheckoutId,
-        [{ variantId, quantity }]
-      )
+      const checkoutId = await requestCheckoutId()
+
+      const checkout = await client.checkout.addLineItems(checkoutId, [
+        { variantId, quantity }
+      ])
       return (checkout as unknown) as Cart
     },
     onSuccess: newCheckout => {
       queryClient.setQueryData(queryKey, newCheckout)
-    },
-    // Always refetch after error or success:
-    onSettled: () => {
-      queryClient.invalidateQueries(queryKey)
     }
   })
 
@@ -146,47 +147,37 @@ const ContextProvider = ({
       variantId: string
       quantity: number
     }) => {
-      if (!localStorageCheckoutId) return
-      const checkout = await client.checkout.updateLineItems(
-        localStorageCheckoutId,
-        [{ quantity, id: variantId }]
-      )
+      const checkoutId = await requestCheckoutId()
+
+      const checkout = await client.checkout.updateLineItems(checkoutId, [
+        { quantity, id: variantId }
+      ])
       return (checkout as unknown) as Cart
     },
     onSuccess: newCheckout => {
       queryClient.setQueryData(queryKey, newCheckout)
-    },
-    // Always refetch after error or success:
-    onSettled: () => {
-      queryClient.invalidateQueries(queryKey)
     }
   })
 
   const { mutateAsync: onRemoveLineItem } = useMutation({
     mutationFn: async ({ variantId }: { variantId: string }) => {
-      if (!localStorageCheckoutId) return
-      const checkout = await client.checkout.removeLineItems(
-        localStorageCheckoutId,
-        [variantId]
-      )
+      const checkoutId = await requestCheckoutId()
+
+      const checkout = await client.checkout.removeLineItems(checkoutId, [
+        variantId
+      ])
       return (checkout as unknown) as Cart
     },
     onSuccess: newCheckout => {
       queryClient.setQueryData(queryKey, newCheckout)
-    },
-    // Always refetch after error or success:
-    onSettled: () => {
-      queryClient.invalidateQueries(queryKey)
     }
   })
 
   const cartItemsCount = React.useMemo(() => {
     let result = 0
-    if (cart?.lineItems && cart?.lineItems.length) {
-      cart.lineItems.forEach(i => {
-        result += i.quantity
-      })
-    }
+    cart?.lineItems?.forEach(i => {
+      result += i.quantity
+    })
     return result
   }, [cart?.lineItems])
 
