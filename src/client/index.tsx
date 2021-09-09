@@ -41,7 +41,7 @@ export type Cart = Omit<
 
 type Context = {
   cartToggleState: ToggleState
-  cart: Cart | undefined
+  cart: Cart | undefined | null
   cartItemsCount: number | undefined
   onAddLineItem: (vars: {
     variantId: string
@@ -75,30 +75,29 @@ const ContextProvider = ({
     return createClient(config)
   }, [config])
 
-  const queryKey = React.useMemo(() => getQueryKey(localStorageCheckoutId), [
-    localStorageCheckoutId
-  ])
-
   React.useEffect(() => {
     const checkoutId = localStorage.getItem('checkout-id')
     if (checkoutId) setLocalStorageCheckoutId(checkoutId)
   }, [])
 
-  const { data: cart } = useQuery<Cart | undefined>(queryKey, {
-    enabled: !!localStorageCheckoutId,
-    queryFn: async () => {
-      if (!localStorageCheckoutId) return undefined
-      const checkout = await client.checkout.fetch(localStorageCheckoutId)
-      if (!checkout) {
-        // checkout has expired or doesn't exist
-        setLocalStorageCheckoutId(null)
-        localStorage.removeItem('checkout-id')
-        return undefined
-      }
-      return (checkout as unknown) as Cart
-    },
-    refetchOnWindowFocus: false
-  })
+  const { data: cart } = useQuery<Cart | undefined | null>(
+    getQueryKey(localStorageCheckoutId),
+    {
+      enabled: !!localStorageCheckoutId,
+      queryFn: async () => {
+        if (!localStorageCheckoutId) return undefined
+        const checkout = await client.checkout.fetch(localStorageCheckoutId)
+        if (!checkout) {
+          // checkout has expired or doesn't exist
+          setLocalStorageCheckoutId(null)
+          localStorage.removeItem('checkout-id')
+          return null
+        }
+        return (checkout as unknown) as Cart
+      },
+      refetchOnWindowFocus: false
+    }
+  )
 
   const createCheckout = React.useCallback(async () => {
     // TODO here we should implement a queue system to prevent throttling the Storefront API
@@ -135,7 +134,10 @@ const ContextProvider = ({
       return (checkout as unknown) as Cart
     },
     onSuccess: newCheckout => {
-      queryClient.setQueryData(queryKey, newCheckout)
+      queryClient.setQueryData(
+        getQueryKey(newCheckout.id.toString()),
+        newCheckout
+      )
     }
   })
 
@@ -155,7 +157,10 @@ const ContextProvider = ({
       return (checkout as unknown) as Cart
     },
     onSuccess: newCheckout => {
-      queryClient.setQueryData(queryKey, newCheckout)
+      queryClient.setQueryData(
+        getQueryKey(newCheckout.id.toString()),
+        newCheckout
+      )
     }
   })
 
@@ -169,7 +174,10 @@ const ContextProvider = ({
       return (checkout as unknown) as Cart
     },
     onSuccess: newCheckout => {
-      queryClient.setQueryData(queryKey, newCheckout)
+      queryClient.setQueryData(
+        getQueryKey(newCheckout.id.toString()),
+        newCheckout
+      )
     }
   })
 
