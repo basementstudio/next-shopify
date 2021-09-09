@@ -60,10 +60,12 @@ const getQueryKey = (checkoutId: string | null) => ['checkout', checkoutId]
 
 const ContextProvider = ({
   children,
-  config
+  config,
+  canCreateCheckout
 }: {
   children?: React.ReactNode
   config: ClientConfig
+  canCreateCheckout?: () => boolean | Promise<boolean>
 }) => {
   const cartToggleState = useToggleState()
   const [localStorageCheckoutId, setLocalStorageCheckoutId] = React.useState<
@@ -102,18 +104,19 @@ const ContextProvider = ({
   const createCheckout = React.useCallback(async () => {
     // TODO here we should implement a queue system to prevent throttling the Storefront API
     // Remember: 1k created checkouts per minute is the limit (4k for Shopify Plus)
+    if (canCreateCheckout && !(await canCreateCheckout())) return
     const checkout = await client.checkout.create()
     const checkoutId = checkout.id.toString()
     queryClient.setQueryData(getQueryKey(checkoutId), checkout)
     localStorage.setItem('checkout-id', checkoutId)
     setLocalStorageCheckoutId(checkoutId)
     return checkout
-  }, [client.checkout, queryClient])
+  }, [canCreateCheckout, client.checkout, queryClient])
 
   const requestCheckoutId = React.useCallback(async () => {
     let checkoutId = localStorageCheckoutId
     if (!checkoutId) {
-      checkoutId = (await createCheckout()).id.toString()
+      checkoutId = (await createCheckout())?.id.toString() ?? null
     }
     return checkoutId
   }, [createCheckout, localStorageCheckoutId])
@@ -127,6 +130,7 @@ const ContextProvider = ({
       quantity: number
     }) => {
       const checkoutId = await requestCheckoutId()
+      if (!checkoutId) throw new Error('checkout id not found')
 
       const checkout = await client.checkout.addLineItems(checkoutId, [
         { variantId, quantity }
@@ -150,6 +154,7 @@ const ContextProvider = ({
       quantity: number
     }) => {
       const checkoutId = await requestCheckoutId()
+      if (!checkoutId) throw new Error('checkout id not found')
 
       const checkout = await client.checkout.updateLineItems(checkoutId, [
         { quantity, id: variantId }
@@ -167,6 +172,7 @@ const ContextProvider = ({
   const { mutateAsync: onRemoveLineItem } = useMutation({
     mutationFn: async ({ variantId }: { variantId: string }) => {
       const checkoutId = await requestCheckoutId()
+      if (!checkoutId) throw new Error('checkout id not found')
 
       const checkout = await client.checkout.removeLineItems(checkoutId, [
         variantId
