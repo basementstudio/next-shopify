@@ -1,5 +1,7 @@
 # next-shopify
 
+**🚨 Library under heavy development. Don't use just yet. 🚨**
+
 [![from the basement.](https://basement.studio/gh-badge.svg)](https://basement.studio)
 
 A context, a hook, and an API route handler, to manage a Shopify Storefront in your Next.js app.
